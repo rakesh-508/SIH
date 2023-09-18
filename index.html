@@ -1,34 +1,61 @@
+<!DOCTYPE html>
 <html>
-
 <head>
-    <title>Delta Meet</title>
-    <link rel="stylesheet" type="text/css" href="styles.css">
+    <title>One-Way Video Broadcasting</title>
 </head>
-
 <body>
-    <h1 class="title">Delta Meet</h1>
-    <p id="notification" hidden></p>
-    <div class="entry-modal" id="entry-modal">
-        <p>Create or Join Meeting</p>
-        <input id="room-input" class="room-input" placeholder="Enter Room ID">
-        <div>
-            <button onclick="createRoom()">Create Room</button>
-            <button onclick="joinRoom()">Join Room</button>
-        </div>
-    </div>
-    <div class="meet-area">
-        <!-- Remote Video Element-->
-        <video id="remote-video"></video>
+    <video id="local-video" autoplay muted></video>
+    <video id="remote-video" autoplay></video>
+    <button onclick="startBroadcast()">Start Broadcasting</button>
+    <button onclick="stopBroadcast()">Stop Broadcasting</button>
+    
+    <script>
+        let localStream;
+        let peerConnection;
+        let remoteVideo = document.getElementById("remote-video");
+        let localVideo = document.getElementById("local-video");
 
-        <!-- Local Video Element-->
-        <video id="local-video"></video>
-        <div class="meet-controls-bar">
-            <button onclick="startScreenShare()">Screen Share</button>
-        </div>
-    </div>
+        async function startBroadcast() {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                localVideo.srcObject = localStream;
+
+                peerConnection = new RTCPeerConnection();
+                localStream.getTracks().forEach((track) => {
+                    peerConnection.addTrack(track, localStream);
+                });
+
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        // Send the candidate to the other peer (e.g., using WebSocket)
+                    }
+                };
+
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+
+                // Send the offer to the other peer (e.g., using WebSocket)
+            } catch (error) {
+                console.error("Error starting broadcast: " + error);
+            }
+        }
+
+        async function stopBroadcast() {
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+
+            if (localStream) {
+                localStream.getTracks().forEach((track) => {
+                    track.stop();
+                });
+                localStream = null;
+            }
+
+            localVideo.srcObject = null;
+            remoteVideo.srcObject = null;
+        }
+    </script>
 </body>
-
-<script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
-<script src="script.js"></script>
-
 </html>
